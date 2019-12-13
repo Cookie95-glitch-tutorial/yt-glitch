@@ -1,1 +1,56 @@
+const botconfig = require("./botconfig.json");
+const tokenfile = require("./token.json");
+const Discord = require("discord.js");
+const fs = require("fs");
+const bot = new Discord.Client({
+    disableEveryone: false
+});
+bot.commands = new Discord.Collection();
+bot.aliases = new Discord.Collection();
+
+fs.readdir("./c/", (err, files) => {
+
+    if (err) console.log(err);
+    let jsfile = files.filter(f => f.split(".").pop() === "js");
+    if (jsfile.length <= 0) {
+        console.log("Couldn't find commands.");
+        return;
+    }
+
+    jsfile.forEach((f, i) => {
+        let props = require(`./c/${f}`);
+        console.log(`${f} loaded!`);
+        bot.commands.set(props.help.name, props);
+              props.help.aliases.forEach(alias => {
+          bot.aliases.set(alias, props.help.name)
+        });
+    });
+});
+
+bot.on("ready", async () => {
+    console.log(`${bot.user.username} is online on ${bot.guilds.size} server(s)!`);
+      bot.user.setStatus('online');    
+      bot.user.setActivity(bot.user.username + " | " + botconfig.prefix); });
+ 
+
+bot.on('message', async (message) => {
+  if (message.author.bot) return;
+
+    let prefix = botconfig.prefix;
+    if (!message.content.startsWith(prefix)) return;
+    let messageArray = message.content.split(" ");
+    let cmd = messageArray[0].toLowerCase();
+    let args = messageArray.slice(1);
+    let commandfile = bot.commands.get(cmd.slice(prefix.length)) || bot.commands.get(bot.aliases.get(cmd.slice(prefix.length)));
+    if (commandfile) commandfile.run(bot, message, args);
+});  
+
+const http = require('http');
+const express = require('express');
+const app = express();
+app.get("/", (request, response) => {
+    response.sendStatus(200);
+});
+app.listen(process.env.PORT);
+bot.login(tokenfile.token);
 
